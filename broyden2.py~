@@ -1,0 +1,39 @@
+'''root finding broyden method for two non linear equation 
+   exact solution of x[0]**2 - x[1]**2 = 9
+		     x[0]**3 + x[1] = 129
+   exact solution is x[0]=5,x[1]=4
+   solution from brouden method is  5.          4.00000001
+'''
+import numpy as np
+from numpy import linalg as LA
+
+def function(x):
+	fx = []
+	fx.append(x[0]**2 - x[1]**2 - 9)
+	fx.append(x[0]**3 + x[1] - 129)
+	return np.array(fx)
+
+def broyden(x=[1.0,1.0],Bx=np.eye(2)*0.001):
+	fx = function(x)
+	N = 0
+	while( LA.norm(fx)>0.00001 ):	
+		#print fx,x
+		px = -np.dot(Bx,fx)
+		#print 'px',px
+		tau = 1
+		x1 = x + tau*px
+		#print 'x1', 
+		x = x1
+		oldfx = fx
+		fx = function(x1)
+		#print "fx",fx
+		pfx = fx - oldfx
+		Bx = Bx + np.tensordot( px - np.dot(Bx,pfx),np.dot(px,Bx),axes=0)/np.dot(np.dot(px,Bx),pfx)
+		print "Bx_after",Bx
+		print "np.dot(np.dot(px,Bx),pfx)",np.dot(np.dot(px,Bx),pfx)
+		N=N+10
+		
+	return x
+
+
+print  broyden()

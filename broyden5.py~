@@ -1,0 +1,119 @@
+'''root finding broyden method for two non linear equation 
+   exact solution of x[0]**2 - x[1]**2 = 9
+		     x[0]**3 + x[1] = 129
+   exact solution is x[0]=5,x[1]=4
+   solution from brouden method is  5.          4.00000001
+'''
+
+# here we are allowing one parameter equation which is true fro hubbard model which is ms,dn
+import numpy as np
+from numpy import linalg as LA
+from scipy import *
+import scipy.optimize as opt
+import os,sys,subprocess
+
+def function(U,x):
+	fx = []
+	
+	#write x
+	#print "U in fn:",U
+	l = open("occupation_in.dat","w")
+	print >> l, "#U, mu, ms, dn" 
+	print >> l, U, U/2.0, x[0], x[1]
+	l.close() 
+
+	#run the command here which read file for x creat file for fx
+	IPTA_info = open( "IPTA.dat",'w')
+	cmd = "./HF_IHM"
+	subprocess.call(cmd,shell=True,stdout=IPTA_info,stderr=IPTA_info)
+	IPTA_info.flush()
+
+	#read fx
+	#column of occupation_out.dat <<"# U,mu,ms1-ms,dn,ntotal-2"<<endl;
+	L = loadtxt("occupation_out.dat")
+	#print "print output",L
+	fx.append(L[2]) #ms1-ms
+	fx.append(L[3]) #dn1-dn
+	#print "fx", fx
+	return np.array(fx)
+
+def broyden(U,x=[1.0,1.0],Bx=np.eye(2)*0.001):
+	fx = function(U,x)
+	N = 0
+	while( LA.norm(fx)>0.00001 ):	
+		#print fx,x
+		px = -np.dot(Bx,fx)
+		#print 'px',px
+		tau = 1
+		x1 = x + tau*px
+		#print 'x1', 
+		x = x1
+		oldfx = fx
+		fx = function(U,x1)
+		#print "fx",fx
+		pfx = fx - oldfx
+		Bx = Bx + np.tensordot( px - np.dot(Bx,pfx),np.dot(px,Bx),axes=0)/np.dot(np.dot(px,Bx),pfx)
+		#print "Bx_after",Bx
+		#print "np.dot(np.dot(px,Bx),pfx)",np.dot(np.dot(px,Bx),pfx)
+		N=N+10
+		
+	return Bx,x
+
+
+'''
+U_list = [0.1,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6]
+#U_list = [0.1]
+output = open("delta0.5_t20.0_broyden_matrix.dat",'w')
+print >> output,"# U,mu,ms1-ms,dn1-dn,,ntotal,ms,dn"
+#print U_list
+
+for U in U_list:
+	x = [0.001,0.001] # ms, dn
+	Bx=np.eye(2)*0.001
+
+	Bx,x = broyden(U,x,Bx)
+	ms = x[0]
+        dn = x[1]
+	print "U,mu,mz,dn", U, U/2.0,ms,dn
+	L = loadtxt("occupation_out.dat")
+	print " U,mu,ms1-ms,dn1-dn,ntotal"
+	print "print output",L
+	# U,mu,ms1-ms,dn1-dn,,ntotal,ms,dn
+	print >> output, L[0],U/2,L[2],L[3],L[4], ms,dn
+
+'''
+
+
+def function1(x):
+	fx = []
+	
+	#write x
+	#print "U in fn:",U
+	U = 2.0
+	l = open("occupation_in.dat","w")
+	print >> l, "#U, mu, ms, dn" 
+	print >> l, U, U/2.0, x[0], x[1]
+	l.close() 
+
+	#run the command here which read file for x creat file for fx
+	IPTA_info = open( "IPTA.dat",'w')
+	cmd = "./HF_IHM"
+	subprocess.call(cmd,shell=True,stdout=IPTA_info,stderr=IPTA_info)
+	IPTA_info.flush()
+
+	#read fx
+	#column of occupation_out.dat <<"# U,mu,ms1-ms,dn,ntotal-2"<<endl;
+	L = loadtxt("occupation_out.dat")
+	#print "print output",L
+	fx.append(L[2]) #ms1-ms
+	fx.append(L[3]) #dn1-dn
+	#print "fx", fx
+	return np.array(fx)
+
+x=[0.1,0.1]
+x = opt.broyden1(function1, x, iter=None, alpha=None, reduction_method='restart', max_rank=None, verbose=False, maxiter=None, f_tol=None, f_rtol=None, x_tol=None, x_rtol=None, tol_norm=None, line_search='armijo', callback=None)
+print x
+
+
+
+

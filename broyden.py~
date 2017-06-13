@@ -1,0 +1,22 @@
+
+def function(x):
+	return x**2-12
+
+def broyden(x=1.0,Bx=0.5):
+	fx = function(x)
+	while(abs(fx)>0.00001):	
+		print x
+		px = -Bx*fx
+		tau = 1
+		x1 = x + tau*px
+		x = x1
+		oldfx = fx
+		fx = function(x1)
+		pfx = fx - oldfx
+		Bx = Bx + ((px - (Bx*pfx))*(px*Bx))/(px*Bx*pfx)
+		
+		
+	return x
+
+
+print  broyden()
