@@ -1,0 +1,83 @@
+
+       module Global
+       implicit none
+       save
+	integer it,N,info, ii,jj
+	real*8, allocatable :: x(:),fx(:),px(:),x1(:),oldfx(:),pfx(:),Bx(:,:),Bxpfx(:),pxBx(:),tensor(:,:)
+	double precision pxBxpfx
+       end module Global
+
+
+	Program BROYDEN
+
+	use Global
+      	implicit none
+	N = 2 ! no of equation
+
+	allocate(x(N),stat=info)
+	allocate(fx(N),stat=info)
+	allocate(px(N),stat=info)
+	allocate(x1(N),stat=info)
+	allocate(oldfx(N),stat=info)
+	allocate(pfx(N),stat=info)
+	allocate(Bxpfx(N),stat=info)
+	allocate(pxBx(N),stat=info)
+	allocate(tensor(N,N),stat=info)	
+	allocate(Bx(N,N),stat=info)
+	
+	x=1.0
+	!Bx=0.001
+	!write(*,*)"Bx",Bx(1:N,1:N)
+	!write(*,*)"x",x(1:N)
+	it = 0
+	Bx(1,1) = 0.001
+	Bx(2,2) = 0.001
+	call function1(N,x,fx)
+	!write(*,*) fx(1:N)
+	do while(abs(fx(1))>0.0001 .and. abs(fx(2))>0.0001)
+	   call mul(Bx,fx,px)
+	   px = -px
+	   !write(*,*) "px",px(1:N)
+	   x1 = x + px
+	   x = x1
+	   oldfx = fx
+	   call function1(N,x,fx)
+	   !write(*,*) "fx",fx(1:N)
+	   pfx = fx - oldfx
+	   !write(*,*) "pfX",pfx(1:N)
+	   call mul(Bx,pfx,Bxpfx)
+	   !write(*,*) Bxpfx(1:N)
+	   call mul1(px,Bx,pxBx)
+	   !write(*,*) "pxBx",pxBx(1:N)
+	   !write(*,*) pfx(1:N)
+	   call mul2(pxBx,pfx,pxBxpfx)
+	   !write(*,*) "pxBxpfx",pxBxpfx
+           !write(*,*)"function are called"
+           !write(*,*)Bx(1:N,1:N)
+	   do ii = 1,N
+	     do jj = 1,N
+		Bx(ii,jj) = Bx(ii,jj) + (px(ii)-Bxpfx(ii))*pxBx(jj)/pxBxpfx
+	     end do
+	   end do
+           !write(*,*)Bx(1:N,1:N)
+	   !Bx = Bx + np.tensordot( px - np.dot(Bx,pfx),np.dot(px,Bx),axes=0)/np.dot(np.dot(px,Bx),pfx)
+	   !write(*,*) px(1:N)
+	   it = it +1
+	end do
+	write(*,*)"solution x",x(1:N)
+	end !BROYDEN
+
+
+
+	subroutine function1(NN,xx,fxx)
+	use Global
+	integer NN
+	real*8 xx(NN),fxx(NN)
+	
+		
+	fxx(1) = xx(1)* xx(1) - xx(2)* xx(2) - 9
+	fxx(2) = xx(1)* xx(1)* xx(1) + xx(2) - 129
+	!write(*,*) "f1 and f1",fxx(1),fxx(2)
+	end
+	
+	

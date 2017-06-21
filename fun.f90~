@@ -1,0 +1,48 @@
+! will be used in broyden.f90
+subroutine mul(Bxx,fxx,pxx)
+	use Global
+        integer i,j
+	double precision sum_
+	real*8 Bxx(N,N),fxx(N),pxx(N)
+	
+	do i=1,N
+	sum_ = 0.0
+	   do j = 1,N
+	       sum_ = sum_ + Bxx(i,j)*fxx(j)
+	       !write(*,*) "sum",Bxx(i,j),fxx(j),sum_
+	   end do
+	pxx(i) = sum_
+	end do
+	end 
+
+subroutine mul1(pxx,Bxx,pxBxx)
+	use Global
+        integer i,j
+	double precision sum_
+	real*8 Bxx(N,N),pxx(N),pxBxx(N)
+	
+	do i=1,N
+	sum_ = 0.0
+	   do j = 1,N
+	       sum_ = sum_ + pxx(j)*Bxx(j,i)
+	       !write(*,*) "sum",Bxx(i,j),fxx(j),sum_
+	   end do
+	pxBxx(i) = sum_
+	end do
+	end 
+	
+subroutine mul2(pxx,fxx,pxfxx)
+	use Global
+        integer i,j
+	double precision pxfxx
+	real*8 fxx(N),pxx(N)
+	
+	  sum_=0.0
+	   do j = 1,N
+	       sum_ = sum_ + pxx(j)*fxx(j)
+	       !write(*,*) "sum",Bxx(i,j),fxx(j),sum_
+	   end do
+	pxfxx= sum_
+	
+	end 
+	

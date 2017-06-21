@@ -1,0 +1,153 @@
+'''root finding broyden method for two non linear equation 
+   exact solution of x[0]**2 - x[1]**2 = 9
+		     x[0]**3 + x[1] = 129
+   exact solution is x[0]=5,x[1]=4
+   solution from brouden method is  5.          4.00000001
+'''
+
+# here we are allowing one parameter equation which is true fro hubbard model which is ms
+import numpy as np
+from numpy import linalg as LA
+from scipy import *
+import os,sys,subprocess
+import scipy.optimize as opt
+
+def function(U,x):
+	fx = []
+	
+	#write x
+	#print "U in fn:",U
+	l = open("occupation_in.dat","w")
+	print >> l, "#U, mu, ms, dn" 
+	print >> l, U, x[0], x[1], 0.0
+	l.close() 
+
+	#run the command here which read file for x creat file for fx
+	IPTA_info = open( "IPTA.dat",'w')
+	cmd = "./HF_"
+	subprocess.call(cmd,shell=True,stdout=IPTA_info,stderr=IPTA_info)
+	IPTA_info.flush()
+
+	#read fx
+	#column of occupation_out.dat <<"# U,mu,ms1-ms,dn,ntotal-2"<<endl;
+	L = loadtxt("occupation_out.dat")
+	#print "print output",L
+	fx.append(L[4]) #ntotal-2
+	fx.append(L[2]) #ms1-ms
+	#print "fx", fx
+	return np.array(fx)
+
+def broyden(U,x=[1.0,1.0],Bx=np.eye(2)*0.001):
+	fx = function(U,x)
+	N = 0
+	N_backstarct = 0
+	oldfx = np.array([100.0,100.0])
+	tau = 0.5
+	while( LA.norm(fx)>0.00001 and N<1000):	
+		#print fx,x
+		px = -np.dot(Bx,fx)
+		print 'px1',px
+		
+		x1 = x + tau*px
+		#print "x1",x1
+		fx_ = function(U,x1)
+		if N==0:
+			tau = 0.5
+		else:
+			print "np.dot(oldfx,oldfx),np.dot(fx_,fx_),tau,x1",np.dot(oldfx,oldfx),np.dot(fx_,fx_),tau,x1
+			if(np.dot(oldfx,oldfx)>np.dot(fx_,fx_)) :
+				
+		
+				
+				#print 'x1', 
+				x = x1
+				oldfx = fx_
+				fx = function(U,x1)
+				#print "fx",fx
+				pfx = fx - oldfx
+				Bx = Bx + np.tensordot( px - np.dot(Bx,pfx),np.dot(px,Bx),axes=0)/np.dot(np.dot(px,Bx),pfx)
+				#print "Bx_after",Bx
+				#print "np.dot(np.dot(px,Bx),pfx)",np.dot(np.dot(px,Bx),pfx)
+			else: 
+				#print "its is back straking"
+				tau = tau*0.5
+				N_backstarct = N_backstarct+1
+		N=N+1
+	print "N,N_backstarct",N,N_backstarct
+	return Bx,x
+
+
+
+
+#U_list = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.2,1.2,1.3]
+U_list = [1.2]
+output = open("delta0.0_t20.1_broyden_matrix.dat",'w')
+print >> output,"# U,mu,ms1-ms,dn,ntotal,ms"
+#print U_list
+x = [0.1,0.4] # mu, ms
+Bx=np.eye(2)*0.001
+
+for U in U_list:
+	Bx,x = broyden(U,x,Bx)
+	ms = x[1]
+        mu = x[0]
+	print "U,mu,mz", U, mu,ms
+	L = loadtxt("occupation_out.dat")
+	print " U,mu,ms1-ms,dn,ntotal-2"
+	print "print output",L
+	# U,mu,ms1-ms,dn,ntotal,ms
+	print >> output, L[0],mu,L[2],L[3],L[4], ms
+	if x[1]<0.01:
+		x[1] = 0.01
+
+'''
+def function1(x):
+	fx = []
+	LA = loadtxt("interaction.in")
+	U = float(LA)
+	l = open("occupation_in.dat","w")
+	print >> l, "#U,mu, ms, dn" 
+	print >> l, U,x[0], x[1], 0.0
+	l.close() 
+
+	#run the command here which read file for x creat file for fx
+	IPTA_info = open( "IPTA.dat",'w')
+	cmd = "./HF_"
+	subprocess.call(cmd,shell=True,stdout=IPTA_info,stderr=IPTA_info)
+	IPTA_info.flush()
+
+	#read fx
+	#column of occupation_out.dat <<"# U,mu,ms1-ms,dn,ntotal-2"<<endl;
+	L = loadtxt("occupation_out.dat")
+	#print "print output",L
+	fx.append(L[4]) #ntotal-2
+	fx.append(L[2]) #ms1-ms
+	#print "fx", fx
+	return np.array(fx)
+
+
+#U_list = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4]
+U_list = [1.3,1.2,1.1,1.0,0.9,0.8,0.7]
+output = open("delta0.0_t20.1_broyden_matrix_reverse.dat",'w')
+print >> output,"# U,mu,ms1-ms,dn,ntotal,ms"
+#print U_list
+x = [0.779716115602, 0.534932346893] # mu, ms
+for U in U_list:
+	LB = open("interaction.in",'w')
+	print >> LB, U
+	LB.close()
+	#x=[0.1,0.1]
+	x = opt.broyden2(function1, x, iter=None, alpha=None, reduction_method='svd', max_rank=None, verbose=False, maxiter=None, f_tol=6e-4, f_rtol=None, x_tol=None, x_rtol=None, tol_norm=None, line_search='armijo', callback=None)
+	print x
+	ms = x[1]
+        mu = x[0]
+	print "U,mu,mz", U, mu,ms
+	L = loadtxt("occupation_out.dat")
+	print " U,mu,ms1-ms,dn,ntotal-2"
+	#print "print output",L
+	# U,mu,ms1-ms,dn,ntotal,ms
+	print >> output, L[0],mu,L[2],L[3],L[4], ms
+	#if x[1]<0.01:
+	#	x[1] = 0.01
+'''
+

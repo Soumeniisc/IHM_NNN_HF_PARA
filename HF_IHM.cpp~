@@ -1,0 +1,301 @@
+//c++ HF_.cpp -std=c++1y
+#include<iostream>
+//#include <array>
+#include <math.h>       /* cos */
+#define PI 3.14159265
+#include <vector>
+#include <cstdlib>     /* abs */
+#include<fstream>// header file for input and output
+#include <sstream> 
+
+using namespace std;
+class HF {
+  long double t,t2,delta,A;
+  const static int dim = 2,GRID = 300, bin = 500;
+  long double cos_[2*GRID] = {};
+  long double lambda_upp[2*GRID][2*GRID] = {{}};
+  long double lambda_dnp[2*GRID][2*GRID] = {{}};
+  long double lambda_upn[2*GRID][2*GRID] = {{}};
+  long double lambda_dnn[2*GRID][2*GRID] = {{}};
+  long double L_upp[2*GRID][2*GRID] = {{}};
+  long double L_dnp[2*GRID][2*GRID] = {{}};
+  long double L_upn[2*GRID][2*GRID] = {{}};
+  long double L_dnn[2*GRID][2*GRID] = {{}};
+  long double CA_upp[2*GRID][2*GRID] = {{}};
+  long double CA_dnp[2*GRID][2*GRID] = {{}};
+  long double CA_upn[2*GRID][2*GRID] = {{}};
+  long double CA_dnn[2*GRID][2*GRID] = {{}};
+  long double CB_upp[2*GRID][2*GRID] = {{}};
+  long double CB_dnp[2*GRID][2*GRID] = {{}};
+  long double CB_upn[2*GRID][2*GRID] = {{}};
+  long double CB_dnn[2*GRID][2*GRID] = {{}};
+  long double dos_upp[bin] = {};
+  long double dos_upn[bin] = {};
+  long double dos_dnp[bin] = {};
+  long double dos_dnn[bin] = {};
+
+  public:
+  long double nA_upn,nA_dnn,nB_upn,nB_dnn;
+  int cnt ;
+  HF(long double t_, long double t2_, long double delta_, int dim_){
+  	t = t_;
+	t2 = t2_;
+	delta = delta_;
+  
+  for(int i = 0; i<2*GRID; i++){
+	cos_[i] = cos( (i-GRID)*PI/(GRID));
+	}
+	} // HF
+
+  long double division(long double a, long double b)
+	{
+	   if( b == 0 )
+	   {
+	      throw "Division by zero condition!";
+	   }
+	   return (a/b);
+	}  
+
+  void solve(long double U, long double mu, long double ms, long double dn){
+  auto nA_up_ =  new (nothrow) long double[2*GRID]();
+  auto nB_up_ =  new (nothrow) long double[2*GRID]();
+  auto nA_dn_ =  new (nothrow) long double[2*GRID]();
+  auto nB_dn_ =  new (nothrow) long double[2*GRID]();
+  cnt = 0;
+  auto nA_up =  0.5*(1.0-dn+ms);
+  auto nB_up =  0.5*(1.0+dn-ms);
+  auto nA_dn =  0.5*(1.0-dn-ms);
+  auto nB_dn =  0.5*(1.0+dn+ms);
+   cout<<"input"<<nA_up<<nA_dn<<nB_up<<nB_dn<<endl;
+   for(int i = 0; i<2*GRID; i++){
+	for(int j = 0; j<2*GRID; j++){
+		auto energy = 2*t*(cos_[i] + cos_[j]);
+		auto energyA = 2*dim*t2*cos_[i]*cos_[j];
+		//cout<<energy<<endl;
+		auto A_up = delta -mu + U*nA_up - energyA;
+		auto A_dn = delta -mu + U*nA_dn - energyA;
+		auto B_up = -delta -mu + U*nB_up - energyA;
+		auto B_dn = -delta -mu + U*nB_dn - energyA;
+		lambda_upp[i][j] = 0.5*( A_dn + B_dn + sqrt( (A_dn - B_dn)*(A_dn - B_dn) + 4*energy*energy) );
+		lambda_dnp[i][j] = 0.5*( A_up + B_up + sqrt( (A_up - B_up)*(A_up - B_up) + 4*energy*energy) );
+		lambda_upn[i][j] = 0.5*( A_dn + B_dn - sqrt( (A_dn - B_dn)*(A_dn - B_dn) + 4*energy*energy) );
+		lambda_dnn[i][j] = 0.5*( A_up + B_up - sqrt( (A_up - B_up)*(A_up - B_up) + 4*energy*energy) );	
+		L_upp[i][j] = (A_up - lambda_dnp[i][j]);
+                L_dnp[i][j] = (A_dn - lambda_upp[i][j]);
+		L_upn[i][j] = (A_up - lambda_dnn[i][j]);
+		L_dnn[i][j] = (A_dn - lambda_upn[i][j]);
+		if(energy != 0.0 ){
+		        try {
+	     			CA_upp[i][j] = division(energy*energy,energy*energy + L_upp[i][j]*L_upp[i][j]);
+	   		}catch (const char* msg) {
+		                 cnt = cnt + 1;
+	     			//cout<<"L_upp"<<A_up<< "  "<<B_up<<"  "<<i<<"   "<<j<<":energy:   "<<energy<<"  " <<energyA<<"   "<<(A_up - lambda_dnp[i][j])<<"  "<<cnt<< endl;
+	  		}
+		try {
+	     			CA_upn[i][j] = division(energy*energy,energy*energy + L_upn[i][j]*L_upn[i][j]);
+	   		}catch (const char* msg) {
+		                 cnt = cnt + 1;
+	     		//	cout<<"L_upp"<<A_up<< "  "<<B_up<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_up - lambda_dnp[i][j])<< endl;
+			}
+		try {
+	     			CA_dnp[i][j] = division(energy*energy,energy*energy + L_dnp[i][j]*L_dnp[i][j]);
+	   		}catch (const char* msg) {
+		                 cnt = cnt + 1;
+	     		//	cout<<"L_upp"<<A_up<< "  "<<B_up<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_up - lambda_dnp[i][j])<< endl;
+			}
+		try {
+	     			CA_dnn[i][j] = division(energy*energy,energy*energy + L_dnn[i][j]*L_dnn[i][j]);
+	   		}catch (const char* msg) {
+		                 cnt = cnt + 1;
+	     		//	cout<<"L_upp"<<A_up<< "  "<<B_up<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_up - lambda_dnp[i][j])<< endl;
+			}
+
+		// now B sublattice calculation start here.
+		 try {
+     				CB_upp[i][j] = division(L_upp[i][j]*L_upp[i][j],energy*energy + L_upp[i][j]*L_upp[i][j]);	
+   		}catch (const char* msg) {
+			cnt = cnt + 1;
+			//cout<<"L_dnp"<<A_dn<< "  "<<B_dn<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_dn - lambda_upp[i][j])<< endl;
+  		}
+                 try {
+     				CB_dnp[i][j] = division(L_dnp[i][j]*L_dnp[i][j],energy*energy + L_dnp[i][j]*L_dnp[i][j]);	
+   		}catch (const char* msg) {
+			cnt = cnt + 1;
+			//cout<<"L_dnp"<<A_dn<< "  "<<B_dn<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_dn - lambda_upp[i][j])<< endl;
+  		}
+                try {
+     				CB_upn[i][j] = division(L_upn[i][j]*L_upn[i][j],energy*energy + L_upn[i][j]*L_upn[i][j]);	
+   		}catch (const char* msg) {
+			cnt = cnt + 1;
+			//cout<<"L_dnp"<<A_dn<< "  "<<B_dn<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_dn - lambda_upp[i][j])<< endl;
+  		}
+                 try {
+     				CB_dnn[i][j] = division(L_dnn[i][j]*L_dnn[i][j],energy*energy + L_dnn[i][j]*L_dnn[i][j]);	
+   		}catch (const char* msg) {
+			cnt = cnt + 1;
+			//cout<<"L_dnp"<<A_dn<< "  "<<B_dn<<"  "<<i<<"   "<<j<<"   "<<energy<<"  " <<energyA<<"   "<<(A_dn - lambda_upp[i][j])<< endl;
+  		}
+		}//end of if(energyA != 0.0)	
+
+		//CA_upp[i][j] = (energy*energy)/(energy*energy + L_upp[i][j]*L_upp[i][j] );
+		//CA_dnp[i][j] = (energy*energy)/( energy*energy + L_dnp[i][j]*L_dnp[i][j]);
+		//CB_upp[i][j] = (L_upp[i][j]*L_upp[i][j])/( energy*energy + L_upp[i][j]*L_upp[i][j]);
+		//CB_dnp[i][j] = (L_dnp[i][j]*L_dnp[i][j])/( energy*energy + L_dnp[i][j]*L_dnp[i][j]);
+		//CA_upn[i][j] = (energy*energy)/(energy*energy + L_upn[i][j]*L_upn[i][j] );
+		//CA_dnn[i][j] = (energy*energy)/( energy*energy + L_dnn[i][j]*L_dnn[i][j]);
+		//CB_upn[i][j] = (L_upn[i][j]*L_upn[i][j])/( energy*energy + L_upn[i][j]*L_upn[i][j]);
+		//CB_dnn[i][j] = (L_dnn[i][j]*L_dnn[i][j])/( energy*energy + L_dnn[i][j]*L_dnn[i][j]);
+	
+	} // for(int i = 0; i<2*GRID; i++)
+  } // for(int j = 0; j<2*GRID; j++)
+
+ 
+  nA_upn = 0.0;
+  nA_dnn = 0.0;
+  nB_upn = 0.0;
+  nB_dnn = 0.0;
+  for(int j = 0; j<2*GRID; j++){
+	for(int i = 0; i<2*GRID; i++){
+		
+			if (lambda_upp[i][j]<0.0){
+				nA_up_[j] = nA_up_[j] + CA_dnp[i][j]; 
+			        nB_up_[j] = nB_up_[j] + CB_dnp[i][j]; 
+				}
+			if (lambda_dnp[i][j]<0.0){ 
+				nA_dn_[j] = nA_dn_[j] + CA_upp[i][j];
+				nB_dn_[j] = nB_dn_[j] + CB_upp[i][j];
+				}
+			if (lambda_upn[i][j]<0.0){ 
+				nA_up_[j] = nA_up_[j] + CA_dnn[i][j]; 
+				nB_up_[j] = nB_up_[j] + CB_dnn[i][j];
+				}
+			if (lambda_dnn[i][j]<0.0){
+				nA_dn_[j] = nA_dn_[j] + CA_upn[i][j];
+				nB_dn_[j] = nB_dn_[j] + CB_upn[i][j];
+				}
+			
+	
+	} //for(int i = 0; i<2*GRID; i++)
+
+    
+		nA_upn = nA_upn + nA_up_[j];
+		nA_dnn = nA_dnn + nA_dn_[j];
+		nB_upn = nB_upn + nB_up_[j];
+		nB_dnn = nB_dnn + nB_dn_[j];
+		
+  } //for(int j = 0; j<2*GRID; j++)
+ delete[] nA_up_;
+ delete[] nB_up_;
+ delete[] nA_dn_;
+ delete[] nB_dn_;
+ nA_upn = nA_upn/(4*GRID*GRID);
+ nA_dnn = nA_dnn/(4*GRID*GRID);
+ nB_upn = nB_upn/(4*GRID*GRID);
+ nB_dnn = nB_dnn/(4*GRID*GRID);
+ cout<<"output"<<nA_upn<<nA_dnn<<nB_upn<<nB_dnn<<endl;
+ }	//solve
+
+  long double get_GRID(){ return 2*t; };
+  auto get_lambda(){return lambda_upp[0][0];}
+
+  auto dos_(long double U, long double mu, long double nA_up, long double nA_dn, long double nB_up, long double nB_dn, long double min_energy, long double max_energy){
+	auto en_step = (max_energy - min_energy)/ bin;
+	int l;		
+	for(int j = 0; j<2*GRID; j++){
+		for(int i = 0; i<2*GRID; i++){
+			auto energy = 2*t*(cos_[i] + cos_[j]);
+			auto energyA = 2*dim*t2*cos_[i]*cos_[j];
+			auto A_up = delta -mu + U*nA_up - energyA;
+			auto A_dn = delta -mu + U*nA_dn - energyA;
+			auto B_up = -delta -mu + U*nB_up - energyA;
+			auto B_dn = -delta -mu + U*nB_dn - energyA;
+			lambda_upp[i][j] = 0.5*( A_dn + B_dn + sqrt( (A_dn - B_dn)*(A_dn - B_dn) + 4*energy*energy) ) - min_energy;
+			l = int(lambda_upp[i][j]/en_step);
+			dos_upp[l] = dos_upp[l] + 1; 
+
+			lambda_dnp[i][j] = 0.5*( A_up + B_up + sqrt( (A_up - B_up)*(A_up - B_up) + 4*energy*energy) )- min_energy;
+			l = int(lambda_dnp[i][j]/en_step);
+			dos_dnp[l] = dos_dnp[l] + 1;
+
+			lambda_upn[i][j] = 0.5*( A_dn + B_dn - sqrt( (A_dn - B_dn)*(A_dn - B_dn) + 4*energy*energy) )- min_energy;
+			l = int(lambda_upn[i][j]/en_step);
+			dos_upn[l] = dos_upn[l] + 1;
+
+			lambda_dnn[i][j] = 0.5*( A_up + B_up - sqrt( (A_up - B_up)*(A_up - B_up) + 4*energy*energy) )- min_energy;	
+			l = int(lambda_dnn[i][j]/en_step);
+			dos_dnn[l] = dos_dnn[l] + 1;
+			}
+		}
+	 stringstream dos_file;
+	 dos_file<<"dos"<<"delta"<<delta<<"U"<<U <<"t2"<<t2<<"h.txt";
+         ofstream dos(dos_file.str());
+         dos<< "# U,mu,nA_up, nA_dn, nB_up, nB_dn, ms, mf, ntotal,mu,cint"<<endl;
+         dos << "#energy    dos_upn   dos_upp   dos_dnn  dos_dnp GRID="<<GRID<<" bin="<<bin<<endl;
+         for(int p = 0; p<bin; p++){
+	   dos_upp[p] = dos_upp[p]/(4*GRID*GRID);
+	   dos_upn[p] = dos_upn[p]/(4*GRID*GRID);
+	   dos_dnp[p] = dos_dnp[p]/(4*GRID*GRID);
+	   dos_dnn[p] = dos_dnn[p]/(4*GRID*GRID);
+	   dos << (min_energy + p*en_step) <<"     "<<dos_upn[p]<<"      "<<dos_upp[p]<<"      "<<dos_dnn[p]<<"     "<<dos_dnp[p]<<endl;
+	}//for(p=)	
+  }//dos
+
+};//class
+
+long double abs(long double a){
+	if (a>0.0){
+		return a;
+	}
+	else{
+		return -1.0*a;
+	}
+	}
+
+int main(){
+  long double t,t2,delta,U,mu,conv,ms,dn;
+  int dim,GRID,loop;
+  t = 0.5;
+  t2 = 0.0;
+  delta = 0.5;
+  dim = 2;
+  GRID = 200;
+  U = 0.1;
+  mu = 0.1;
+
+  HF hf(t,t2,delta,dim);
+
+  // read n values
+  
+  ifstream infile; 
+  infile.open("occupation_in.dat"); 
+  if(infile.is_open()){std::cout<<"file occupation_in.dat is open"<<endl;}  
+   std::string line;
+   while (std::getline(infile, line)) {
+	//std::cout<<line<<std::endl;
+	if(line[0] != '#'){
+   		std::istringstream ss(line);
+		ss >> U >> mu >> ms >> dn;
+		std::cout<<U <<"  "<< mu <<"  "<< ms <<"  "<< dn <<endl;
+	}//if
+   }//while
+  
+  
+  
+  
+  
+  
+  hf.solve(U, mu, ms,dn);
+  auto ntotal = hf.nA_upn + hf.nA_dnn + hf.nB_upn + hf.nB_dnn;
+  auto ms1= 0.5*(hf.nA_upn - hf.nA_dnn - hf.nB_upn + hf.nB_dnn);
+  auto dn1= 0.5*(-hf.nA_upn - hf.nA_dnn + hf.nB_upn + hf.nB_dnn);
+
+  // write n values
+  ofstream soumen("occupation_out.dat");
+  soumen <<"# U,mu,ms1-ms,dn,ntotal-2"<<endl;
+  soumen << U<<"  "<<mu<<"   "<<ms1-ms<<"	"<<dn1-dn<<"   "<<(ntotal)<<endl;
+  soumen.close();
+  
+
+  return 0;
+
+} //main
